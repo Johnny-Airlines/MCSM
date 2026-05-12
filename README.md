@@ -1,0 +1,2 @@
+# MCSM
+Minecraft Server Management.
