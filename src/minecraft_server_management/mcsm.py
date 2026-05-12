@@ -1,5 +1,6 @@
 import os
 import requests
+import json
 import click
 from click_prompt import choice_option, auto_complete_option
 
@@ -22,28 +23,37 @@ def get_version(ctx, param, value):
         r = requests.get("https://meta.fabricmc.net/v2/versions/game")
         response = r.json()
         versionIds = [v["version"] for v in response]
-    ctx.command.params[2].type = click.Choice(versionIds)
-    ctx.command.params[2].choices = versionIds
-    ctx.command.params[2].required = True
+    ctx.command.params[3].type = click.Choice(versionIds)
+    ctx.command.params[3].choices = versionIds
+    ctx.command.params[3].required = True
+    return value
 
 
 def version_defined(ctx, param, value):
     if not param.required:
         click.echo("Please specify mod loader before specifying version.")
         quit()
+    return value
 
 
 @mcsm.command("setup")
 @click.option(
+    "--dir",
+    "-d",
+    "dir",
+    default="./",
+    help="Filepath to server directory. Must exist beforehand. Default is current directory.",
+    type=click.Path(exists=True),
+)
+@click.option(
     "--override",
     "-o",
-    "override",
     help="Enables overriding pre-existing configurations.",
     is_flag=True,
 )
 @choice_option(
-    "--mod-loader",
     "-ml",
+    "--mod-loader",
     help="The mod loader to use.",
     type=click.Choice(["Vanilla", "Fabric"]),
     callback=get_version,
@@ -51,15 +61,19 @@ def version_defined(ctx, param, value):
 @auto_complete_option(
     "--version", "-v", help="The version.", required=False, callback=version_defined
 )
-def setup(override, mod_loader, version):
-    if os.path.exists("./conf.json"):
+def setup(dir, override, mod_loader, version):
+    print(mod_loader)
+    path_to_conf = os.path.join(dir, "conf.json")
+    if os.path.exists(path_to_conf):
         if not override:
             override = click.confirm(
                 "Conf.json already found, override?", default=False
             )
         if not override:
             return
-    click.echo("Setup")
+    click.echo("Creating conf.json")
+    with open(path_to_conf, "w") as conf:
+        json.dump({"mod-loader": mod_loader, "version": version}, conf, indent=4)
 
 
 @mcsm.command("remove")
