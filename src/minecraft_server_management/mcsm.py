@@ -16,9 +16,15 @@ def get_version(ctx, param, value):
         )
         version_manifest = r.json()
         versions = version_manifest["versions"]
-        ctx.command.params[2].type = click.Choice([v["id"] for v in versions])
-        ctx.command.params[2].choices = [v["id"] for v in versions]
-        ctx.command.params[2].required = True
+        versionIds = [v["id"] for v in versions]
+
+    if value == "Fabric":
+        r = requests.get("https://meta.fabricmc.net/v2/versions/game")
+        response = r.json()
+        versionIds = [v["version"] for v in response]
+    ctx.command.params[2].type = click.Choice(versionIds)
+    ctx.command.params[2].choices = versionIds
+    ctx.command.params[2].required = True
 
 
 def version_defined(ctx, param, value):
