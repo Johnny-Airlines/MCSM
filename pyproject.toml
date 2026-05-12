@@ -1,0 +1,26 @@
+[[tool.uv.index]]
+url = "https://pypi.org/simple"
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+
+[project]
+name = "minecraft-server-management"
+version = "0.0.1"
+description = "An interactive cli tool for managing minecraft servers."
+requires-python = ">=3.14"
+dependencies = [
+    "click>=8.1.7",
+    "click-prompt>=0.7.1",
+    "requests>=2.33.1",
+]
+
+[project.scripts]
+mcsm = "minecraft_server_management.mcsm:mcsm"
+
+[build-system]
+requires = ["flit_core<4"]
+build-backend = "flit_core.buildapi"
+
+
