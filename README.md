@@ -17,3 +17,7 @@ rm -rf ./MCSM
 
 ## Usage
 Will be updated. For now please just use the help provided with --help, the command is mcsm. For help on a subcommand, run mcsm [subcommand] --help.
+
+## Uninstallation
+```
+uv tool uninstall minecraft-server-management
