@@ -5,6 +5,8 @@ import requests
 import json
 import click
 from click_prompt import choice_option, auto_complete_option
+import rich.progress
+from term_image.image import from_url
 
 
 @click.group()
@@ -76,7 +78,7 @@ def setup(dir, override, mod_loader, version):
     click.echo("Creating conf.json")
     with open(path_to_conf, "w") as conf:
         json.dump(
-            {"mod-loader": mod_loader, "version": version, "uid": time()},
+            {"mod_loader": mod_loader, "version": version, "uid": time()},
             conf,
             indent=4,
         )
@@ -93,11 +95,23 @@ def setup(dir, override, mod_loader, version):
         r = requests.get(version_json_url)
         version_url = r.json()["downloads"]["server"]["url"]
     elif mod_loader == "Fabric":
-        version_url = f"https://meta.fabricmc.net/v2/versions/loader/{v['version']}/0.19.2/1.1.1/server/jar"
-    r = requests.get(version_url)
-    with open(os.path.join(dir, "server.jar"), mode="wb") as file:
-        for chunk in r.iter_content(chunk_size=10 * 1024):
-            file.write(chunk)
+        version_url = f"https://meta.fabricmc.net/v2/versions/loader/{version}/0.19.2/1.1.1/server/jar"
+    r = requests.get(version_url, stream=True)
+    total_size = int(r.headers.get("content-length", 0))
+    decorations = [
+        rich.progress.BarColumn(),
+        rich.progress.DownloadColumn(),
+        rich.progress.TransferSpeedColumn(),
+        rich.progress.TimeRemainingColumn(),
+    ]
+    with rich.progress.Progress(
+        "[bold cyan]Downloading server jar[/]", *decorations
+    ) as progress:
+        task = progress.add_task("download_file", total=total_size)
+        with open(os.path.join(dir, "server.jar"), mode="wb") as file:
+            for chunk in r.iter_content(chunk_size=1024):
+                progress.update(task, advance=len(chunk))
+                file.write(chunk)
 
 
 @mcsm.command("start")
@@ -109,6 +123,7 @@ def setup(dir, override, mod_loader, version):
     help="Filepath to server directory. Must exist. Default is current directory.",
     type=click.Path(exists=True),
 )
+@click.option("--detach", help="Never attaches, just starts.", is_flag=True)
 def start(dir):
     with open(os.path.join(dir, "conf.json")) as conf:
         uid = json.load(conf)["uid"]
@@ -150,3 +165,35 @@ def console(dir):
 @mcsm.command("remove")
 def remove():
     click.echo("Removing")
+
+
+@mcsm.group()
+def mods():
+    pass
+
+
+@mods.command("install")
+@click.option(
+    "--dir",
+    "-d",
+    "dir",
+    default="./",
+    help="Filepath to server directory. Must exist. Default is current directory.",
+    type=click.Path(exists=True),
+)
+@click.option("--query", "-q", "query", help="The query string for the mod.")
+def install(dir, query):
+    with open(os.path.join(dir, "conf.json")) as conf:
+        data = json.load(conf)
+        version = data["version"]
+        mod_loader = data["mod_loader"]
+    r = requests.get(
+        "https://api.modrinth.com/v2/search",
+        params={
+            "query": query,
+            "facets": f'[["categories:{mod_loader}"],["versions:{version}"]]',
+        },
+    )
+    results = r.json()
+    print(results["hits"][0])
+    from_url(results["hits"][0]["icon_url"]).draw()
