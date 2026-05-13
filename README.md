@@ -7,6 +7,7 @@ It will be put up on PYPI, but for now a manual install from this repo is requir
 
 #### Requirements
 - uv - https://github.com/astral-sh/uv
+- java - The appropiate version of java will be required, this is not managed. (perhaps in the future)
 ```
 git clone https://github.com/Johnny-Airlines/MCSM.git
 cd MCSM
