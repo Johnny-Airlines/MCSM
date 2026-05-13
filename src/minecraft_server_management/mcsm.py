@@ -112,6 +112,7 @@ def setup(dir, override, mod_loader, version):
 def start(dir):
     with open(os.path.join(dir, "conf.json")) as conf:
         uid = json.load(conf)["uid"]
+
     click.echo("Starting server and entering the server console.")
     click.echo("To detach, press ctrl-a then d.")
     click.echo("Starting ...")
@@ -121,7 +122,9 @@ def start(dir):
     subprocess.run(
         f"screen -r {uid} -X stuff $'echo eula=true > eula.txt\n'", shell=True
     )
-    subprocess.run(f"screen -r {uid} -X stuff $'java -jar server.jar --no-gui\n'", shell=True)
+    subprocess.run(
+        f"screen -r {uid} -X stuff $'java -jar server.jar --no-gui\n'", shell=True
+    )
     subprocess.run(f"screen -r {uid}", shell=True)
 
 
