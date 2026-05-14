@@ -195,5 +195,17 @@ def install(dir, query):
         },
     )
     results = r.json()
-    print(results["hits"][0])
-    from_url(results["hits"][0]["icon_url"]).draw()
+    if results["total_hits"] == 0:
+        click.echo("No search results.")
+        return
+    count = 1
+    for hit in results["hits"][:3]:
+        image = from_url(hit["icon_url"], width=15)
+        image = "{:1.1}".format(image)
+        image_lines = str(image).splitlines()
+        click.secho(f"{image_lines[0]}    {count}: {hit['title']}", bold=True)
+        image_lines.pop(0)
+        click.echo(f"{image_lines[0]}    {hit['description']}")
+        image_lines.pop(0)
+        print("\n".join(image_lines))
+        count += 1
