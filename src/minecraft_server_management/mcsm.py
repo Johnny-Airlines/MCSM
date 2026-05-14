@@ -124,7 +124,7 @@ def setup(dir, override, mod_loader, version):
     type=click.Path(exists=True),
 )
 @click.option("--detach", help="Never attaches, just starts.", is_flag=True)
-def start(dir):
+def start(dir, detach):
     with open(os.path.join(dir, "conf.json")) as conf:
         uid = json.load(conf)["uid"]
 
@@ -138,7 +138,7 @@ def start(dir):
         f"screen -r {uid} -X stuff $'echo eula=true > eula.txt\n'", shell=True
     )
     subprocess.run(
-        f"screen -r {uid} -X stuff $'java -jar server.jar --no-gui\n'", shell=True
+        f"screen -r {uid} -X stuff $'java -jar server.jar nogui\n'", shell=True
     )
     subprocess.run(f"screen -r {uid}", shell=True)
 
