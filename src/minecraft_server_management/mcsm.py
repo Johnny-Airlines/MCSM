@@ -9,6 +9,23 @@ import rich.progress
 from term_image.image import from_url
 
 
+def download_file(url, path, message):
+    r = requests.get(url, stream=True)
+    total_size = int(r.headers.get("content-length", 0))
+    decorations = [
+        rich.progress.BarColumn(),
+        rich.progress.DownloadColumn(),
+        rich.progress.TransferSpeedColumn(),
+        rich.progress.TimeRemainingColumn(),
+    ]
+    with rich.progress.Progress(f"[bold cyan]{message}[/]", *decorations) as progress:
+        task = progress.add_task("download_file", total=total_size)
+        with open(path, mode="wb") as file:
+            for chunk in r.iter_content(chunk_size=1024):
+                progress.update(task, advance=len(chunk))
+                file.write(chunk)
+
+
 @click.group()
 def mcsm():
     click.echo("Minecraft Server Management")
@@ -96,22 +113,9 @@ def setup(dir, override, mod_loader, version):
         version_url = r.json()["downloads"]["server"]["url"]
     elif mod_loader == "Fabric":
         version_url = f"https://meta.fabricmc.net/v2/versions/loader/{version}/0.19.2/1.1.1/server/jar"
-    r = requests.get(version_url, stream=True)
-    total_size = int(r.headers.get("content-length", 0))
-    decorations = [
-        rich.progress.BarColumn(),
-        rich.progress.DownloadColumn(),
-        rich.progress.TransferSpeedColumn(),
-        rich.progress.TimeRemainingColumn(),
-    ]
-    with rich.progress.Progress(
-        "[bold cyan]Downloading server jar[/]", *decorations
-    ) as progress:
-        task = progress.add_task("download_file", total=total_size)
-        with open(os.path.join(dir, "server.jar"), mode="wb") as file:
-            for chunk in r.iter_content(chunk_size=1024):
-                progress.update(task, advance=len(chunk))
-                file.write(chunk)
+    download_file(
+        version_url, os.path.join(dir, "server.jar"), "Downloading server jar"
+    )
 
 
 @mcsm.command("start")
@@ -181,17 +185,26 @@ def mods():
     help="Filepath to server directory. Must exist. Default is current directory.",
     type=click.Path(exists=True),
 )
-@click.option("--query", "-q", "query", help="The query string for the mod.")
-def install(dir, query):
+@click.option("--query", "-q", help="The query string for the mod.")
+@click.option("--project-id", "-id", help="The project id of the mod.")
+def install(dir, query, project_id):
     with open(os.path.join(dir, "conf.json")) as conf:
         data = json.load(conf)
         version = data["version"]
         mod_loader = data["mod_loader"]
+    if query == None:
+        if project_id == None:
+            click.echo(
+                "Please specify either a query and interactively select a mod, or give a project id."
+            )
+            return
+        click.echo(project_id)
+        return
     r = requests.get(
         "https://api.modrinth.com/v2/search",
         params={
             "query": query,
-            "facets": f'[["categories:{mod_loader}"],["versions:{version}"]]',
+            "facets": f'[["categories:{mod_loader}"],["versions:{version}"],["project_type:mod"]]',
         },
     )
     results = r.json()
@@ -200,12 +213,17 @@ def install(dir, query):
         return
     count = 1
     for hit in results["hits"][:3]:
-        image = from_url(hit["icon_url"], width=15)
+        icon_url = hit["icon_url"]
+        if hit["icon_url"] == "":
+            icon_url = "https://modrinth.com/favicon.ico"
+        image = from_url(icon_url, width=15)
         image = "{:1.1}".format(image)
         image_lines = str(image).splitlines()
         click.secho(f"{image_lines[0]}    {count}: {hit['title']}", bold=True)
         image_lines.pop(0)
-        click.echo(f"{image_lines[0]}    {hit['description']}")
+        clean_description = hit["description"].replace("\n", " ")
+        click.echo(f"{image_lines[0]}    {clean_description}")
         image_lines.pop(0)
         print("\n".join(image_lines))
         count += 1
+
