@@ -235,12 +235,7 @@ def install(dir, query, project_id):
         click.echo(f"{image_lines[0]}    {clean_description}")
         image_lines.pop(0)
         print("\n".join(image_lines))
-    choices = [
-        results["hits"][0]["title"],
-        results["hits"][1]["title"],
-        results["hits"][2]["title"],
-        "Quit - Try a more specific query.",
-    ]
+    choices = [hit["title"] for hit in results["hits"][:3]]+["Quit - Try a more specific query."]
     mod_choice = questionary.select("Pick a mod: ", choices=choices).ask()
     index_of_mod = choices.index(mod_choice)
     if index_of_mod == 3:
